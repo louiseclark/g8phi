@@ -40,6 +40,7 @@
  *    0.09 < kaon mass squared < 0.49
  * 4. best photon time difference (for proton/K+) is between -1 and 1
  * 5. missing mass
+ *    between -0.1 and 0.1 (for all exclusive case)
  *    between 0.4 and 0.6 (for missing kaon)
  *    between 0.84 and 1.04 (for missing proton)
  *    between -0.1 and 0.1 (for all particles detected)
@@ -67,7 +68,7 @@
  * After cut 4
  * - h3_bestPhotonTimeDiff - time difference between photon and proton (best photon)
  * - h3_bestPhotonEnergy - photon energy for best photon
- * - h3_missingMass1 - missing mass of p, K+ and K- (using best photon for proton) - should be zero
+ * - h3_missingMass1 - missing mass squared of p, K+ and K- (using best photon for proton) - should be zero
  * - h3_missingMass2 - missing mass of p and K+ (using best photon for proton)
  * - h3_missingMass3 - missing mass of p and K- (using best photon for proton)
  * - h3_missingMass4 - missing mass of K- and K+ (using best photon for K+)
@@ -80,7 +81,7 @@
  * 
  * After cut 5
  * - h4_multHist: Multiplicity
- * - h4_missingMass1 - missing mass of p, K+ and K- (using best photon for proton) - should be zero
+ * - h4_missingMass1 - missing mass squared of p, K+ and K- (using best photon for proton) - should be zero
  * - h4_missingMass2 - missing mass of p and K+ (using best photon for proton)
  * - h4_missingMass3 - missing mass of p and K- (using best photon for proton)
  * - h4_missingMass4 - missing mass of K- and K+ (using best photon for K+)
@@ -97,7 +98,8 @@
  * - h4_MM_pKMinus_pPiMinus - missing mass of proton and kaon like particle with kaon mass assigned vs
  *                            missing mass of proton and kaon like particle with pion mass assigned
  * - h4_KK_pK  - mass of K+ and K- 
- * 			  vs mass of p and K-  
+ * 			  vs mass of p and K-
+ * - h4_KK_pK1/2/3/4 as above for pid 1/2/3/4  
  * - h4_photonEnergy - photon energy for phi production (threshold is 1.57 GeV)
  * 
  ******************************************************************************* 
@@ -119,6 +121,9 @@
 #include "particleDEF.h"        //Particle Definitions
 #include "TCanvas.h"
 #include "TStyle.h"
+#include "TSystem.h"
+#include "TROOT.h"
+#include "/home/louise/g8_phi/haspect/Events-master/HaSpect/THSParticle.h"
 #include "extra_packages/eloss_rb/eLoss.h"      
 
 #include <iostream>				// for debugging
@@ -206,6 +211,10 @@ class 	TH1D *h4_phi4;
 class 	TH1D *h4_phiTotal;
 class 	TH2D *h4_MM_pKPlus_pPiPlus;
 class 	TH2D *h4_MM_pKMinus_pPiMinus;
+class 	TH2D *h4_KK_pK1;
+class 	TH2D *h4_KK_pK2;
+class 	TH2D *h4_KK_pK3;
+class 	TH2D *h4_KK_pK4;
 class 	TH2D *h4_KK_pK;
 class	TH1D *h4_photonEnergy;
 
@@ -294,7 +303,57 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
   char 	name[100];			// hold temp names for hists 
   //                                                                    *
   // ******************* end of my variables ****************************
+  Double_t fgID=0;
   
+  // Macro loading moved to RootBeerSetup.cxx
+  //TString HSANA=gSystem->Getenv("HSANA");
+  //gInterpreter->AddIncludePath(HSANA);
+  //gROOT->LoadMacro(HSANA+"/THSParticle.C++");
+  
+  THSParticle* hsProton=new THSParticle(2212);
+  THSParticle* hsKp=new THSParticle(321);
+  THSParticle* hsKm=new THSParticle(-321);
+  THSParticle* hsBeam=new THSParticle(22);
+ 
+  Int_t buff=32000;
+  Int_t split=0;
+  
+  // p K+ K-
+  TFile* filepKpKm=new TFile("filepKpKm.root","recreate");
+  TTree* treepKpKm=new TTree("HSParticles","output tree",0);
+  treepKpKm->Branch("fgID",&fgID,"fgID/D");
+  //treepKpKm->Branch("Pol",&Pol,"Pol/D");
+  //treepKpKm->Branch("PolState",&PolState,"PolState/I");
+  treepKpKm->Branch("proton",&hsProton,buff,split);
+  treepKpKm->Branch("Kp",&hsKp,buff,split);
+  treepKpKm->Branch("Km",&hsKm,buff,split);
+  treepKpKm->Branch("beam",&hsBeam,buff,split);
+
+  // p K+
+  TFile* filepKp=new TFile("filepKp.root","recreate");
+  TTree* treepKp=new TTree("HSParticles","output tree",0);
+  treepKp->Branch("fgID",&fgID,"fgID/D");
+  treepKp->Branch("proton",&hsProton,buff,split);
+  treepKp->Branch("Kp",&hsKp,buff,split);
+  treepKp->Branch("beam",&hsBeam,buff,split);
+  
+  // p K-
+  TFile* filepKm=new TFile("filepKm.root","recreate");
+  TTree* treepKm=new TTree("HSParticles","output tree",0);
+  treepKm->Branch("fgID",&fgID,"fgID/D");
+  treepKm->Branch("proton",&hsProton,buff,split);
+  treepKm->Branch("Km",&hsKm,buff,split);
+  treepKm->Branch("beam",&hsBeam,buff,split);  
+  
+  // K+ K-
+  TFile* fileKpKm=new TFile("fileKpKm.root","recreate");
+  TTree* treeKpKm=new TTree("HSParticles","output tree",0);
+  treeKpKm->Branch("fgID",&fgID,"fgID/D");
+  treeKpKm->Branch("Kp",&hsKp,buff,split);
+  treeKpKm->Branch("Km",&hsKm,buff,split);
+  treeKpKm->Branch("beam",&hsBeam,buff,split);  
+  
+ 
   // ************************* required init stuff **********************
   //                                                                    *
 #ifdef ROOTEXE					//if running as an executable
@@ -304,7 +363,7 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
   //
   //                                                                    *
   // ****************** end of required init stuff **********************
-
+  
   // ******* User initialisation ****************************************
   //                                                                    *
   //
@@ -384,7 +443,7 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
   
   h3_bestPhotonTimeDiff = new TH1D("h3_bestPhotonTimeDiff", "Proton - photon time diff - best photons", 1000, -50.0, 50.0);  		     
   h3_bestPhotonEnergy = new TH1D("h3_bestPhotonEnergy", "Best Photon Energy", 1000, 0.0, 3.0);
-  h3_missingMass1 = new TH1D("h3_missingMass1", "Missing Mass (pK+K-)", 1000, -2.0, 2.0);
+  h3_missingMass1 = new TH1D("h3_missingMass1", "Missing Mass^2 (pK+K-)", 1000, -1.5, 1.5);
   h3_missingMass2 = new TH1D("h3_missingMass2", "Missing Mass (pK+)", 1000, 0.0, 1.6);
   h3_missingMass3 = new TH1D("h3_missingMass3", "Missing Mass (pK-)", 1000, 0.0, 1.6);
   h3_missingMass4 = new TH1D("h3_missingMass4", "Missing Mass (K+K-)", 1000, 0.0, 1.6);
@@ -399,17 +458,17 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
   h3_MM_pKMinus_pPiMinus->GetYaxis()->SetTitle("MM(pK-)");  
   
   h4_multHist = new TH1D("h4_multiplicity", "Multiplicity - after cuts", 5, 0, 5);  	  
-  h4_missingMass1 = new TH1D("h4_missingMass1", "Missing Mass (pK+K-)", 1000, -2.0, 2.0);
+  h4_missingMass1 = new TH1D("h4_missingMass1", "Missing Mass^2 (pK+K-)", 1000, -1.5, 1.5);
   h4_missingMass2 = new TH1D("h4_missingMass2", "Missing Mass (pK+)", 1000, 0.0, 1.6);
   h4_missingMass3 = new TH1D("h4_missingMass3", "Missing Mass (pK-)", 1000, 0.0, 1.6);
   h4_missingMass4 = new TH1D("h4_missingMass4", "Missing Mass (K+K-)", 1000, 0.0, 1.6);
   h4_KPlusMissingMass = new TH1D("h4_KPlusMissingMass", "Mass K+ and Missing K-", 1000, 0.0, 2.0);
   h4_KMinusMissingMass = new TH1D("h4_KMinusMissingMass", "Mass K- and Missing K+", 1000, 0.0, 2.0);
-  h4_phi1 = new TH1D("h4_phi1", "Mass K+ K- pid 1", 1000, 0.0, 2.0);
-  h4_phi2 = new TH1D("h4_phi2", "Mass K+ K- pid 2", 1000, 0.0, 2.0);
-  h4_phi3 = new TH1D("h4_phi3", "Mass K+ K- pid 3", 1000, 0.0, 2.0);
-  h4_phi4 = new TH1D("h4_phi4", "Mass K+ K- pid 4", 1000, 0.0, 2.0);
-  h4_phiTotal = new TH1D("h4_phiTotal", "Mass K+ K- All events", 1000, 0.0, 2.0);  
+  h4_phi1 = new TH1D("h4_phi1", "Mass K+ K- pid 1", 1000, 0.8, 1.4);
+  h4_phi2 = new TH1D("h4_phi2", "Mass K+ K- pid 2", 1000, 0.8, 1.4);
+  h4_phi3 = new TH1D("h4_phi3", "Mass K+ K- pid 3", 1000, 0.8, 1.4);
+  h4_phi4 = new TH1D("h4_phi4", "Mass K+ K- pid 4", 1000, 0.8, 1.4);
+  h4_phiTotal = new TH1D("h4_phiTotal", "Mass K+ K- All events", 1000, 0.8, 2.0);  
 
   h4_betamomp = new TH2D("h4_betamomp", "Beta vs p +", 500, 0.0, 4.0, 500, 0.0, 1.5);
   h4_betamomp->GetXaxis()->SetTitle("p");
@@ -422,17 +481,27 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
   h4_MM_pKMinus_pPiMinus->GetXaxis()->SetTitle("MM(pPi-)");
   h4_MM_pKMinus_pPiMinus->GetYaxis()->SetTitle("MM(pK-)");
 
-  //h4_KK_pMM = new TH2D("h4_KK_pMM", "Mass (K+ and Missing Mass) vs Mass (p and Missing Mass)", 200, 1.2, 2.5, 200, 0.7, 2.5);
-  //h4_KK_pMM->GetXaxis()->SetTitle("Mass (p and K-)");
-  //h4_KK_pMM->GetYaxis()->SetTitle("Mass (K+ and Missing Mass)");
-  //h4_KK_pMM->GetXaxis()->SetNdivisions(14);
-  //h4_KK_pMM->GetYaxis()->SetNdivisions(18);
+  h4_KK_pK1 = new TH2D("h4_KK_pK", "Mass (K+ and K-) vs Mass (p and K-) pid 1", 200, 1.2, 2.1, 200, 0.7, 1.8);
+  h4_KK_pK1->GetXaxis()->SetTitle("Mass (p and K-)");
+  h4_KK_pK1->GetYaxis()->SetTitle("Mass (K+ and K-)");
 
-  h4_KK_pK = new TH2D("h4_KK_pK", "Mass (K+ and K-) vs Mass (p and K-)", 200, 1.2, 2.1, 200, 0.7, 1.8);
+  h4_KK_pK2 = new TH2D("h4_KK_pK", "Mass (K+ and K-) vs Mass (p and K-) pid 2", 200, 1.2, 2.1, 200, 0.7, 1.8);
+  h4_KK_pK2->GetXaxis()->SetTitle("Mass (p and K-)");
+  h4_KK_pK2->GetYaxis()->SetTitle("Mass (K+ and K-)");
+
+  h4_KK_pK3 = new TH2D("h4_KK_pK", "Mass (K+ and K-) vs Mass (p and K-) pid 3", 200, 1.2, 2.1, 200, 0.7, 1.8);
+  h4_KK_pK3->GetXaxis()->SetTitle("Mass (p and K-)");
+  h4_KK_pK3->GetYaxis()->SetTitle("Mass (K+ and K-)");
+
+  h4_KK_pK4 = new TH2D("h4_KK_pK", "Mass (K+ and K-) vs Mass (p and K-) pid 4", 200, 1.2, 2.1, 200, 0.7, 1.8);
+  h4_KK_pK4->GetXaxis()->SetTitle("Mass (p and K-)");
+  h4_KK_pK4->GetYaxis()->SetTitle("Mass (K+ and K-)");
+
+  h4_KK_pK = new TH2D("h4_KK_pK", "Mass (K+ and K-) vs Mass (p and K-) All events", 200, 1.2, 2.1, 200, 0.7, 1.8);
   h4_KK_pK->GetXaxis()->SetTitle("Mass (p and K-)");
   h4_KK_pK->GetYaxis()->SetTitle("Mass (K+ and K-)");
-  //h4_KK_pK->GetXaxis()->SetNdivisions(14);
-  //h4_KK_pK->GetYaxis()->SetNdivisions(18);
+
+
   h4_photonEnergy = new TH1D("h4_photonEnergy", "Photon Energy", 1000, 0.0, 3.0);
 
   // 4 vectors
@@ -720,16 +789,24 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
 		  *lKMinus = *lKMinusDet;
 		  *lNoMM = (*lTarget + *lPhoton) - (*lProton + *lKPlus + *lKMinus);
 		  *lPhi = *lKPlus + *lKMinus;
-		  h3_missingMass1->Fill(lNoMM->M());
+		  h3_missingMass1->Fill(lNoMM->M2());
 
 		  // CUT 5
 		  // Only keep events where missing mass is close to mass of expected particle (zero in this case)
 	      if ((lNoMM->M() < -0.1) || (lNoMM->M() > 0.1)) continue;
 
-		  h4_missingMass1->Fill(lNoMM->M());
+		  h4_missingMass1->Fill(lNoMM->M2());
 		  
 	      // Plot the phi for this pid
 	      h4_phi1->Fill(lPhi->M());
+	      h4_KK_pK1->Fill((*lProton + *lKMinus).M(), (*lKPlus + *lKMinus).M());
+	      
+	      //Fill HSParticles
+	      hsProton->SetP4(*lProton);
+	      hsKp->SetP4(*lKPlus);
+	      hsKm->SetP4(*lKMinus);
+	      hsBeam->SetP4(*lPhoton);
+	      treepKpKm->Fill();
 		  
 	  }
 	  else if (pid==2) {
@@ -763,6 +840,13 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
 	      
 	      // Plot the phi for this pid
 	      h4_phi2->Fill(lPhi->M());
+		  h4_KK_pK2->Fill((*lProton + *lKMinus).M(), (*lKPlus + *lKMinus).M());
+	      
+	      //Fill HSParticles
+	      hsProton->SetP4(*lProton);
+	      hsKp->SetP4(*lKPlus);
+	      hsBeam->SetP4(*lPhoton);
+	      treepKp->Fill();	      
 
 	  }
 	  else if (pid==3) {
@@ -796,7 +880,14 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
 		  h4_MM_pKMinus_pPiMinus->Fill(lMMProtonPiMinus->M(), lKPlusMM->M());	
 	      
 	      // Plot the phi for this pid
-	      h4_phi3->Fill(lPhi->M());	      
+	      h4_phi3->Fill(lPhi->M());	     
+		  h4_KK_pK3->Fill((*lProton + *lKMinus).M(), (*lKPlus + *lKMinus).M());
+	      
+  	      //Fill HSParticles
+	      hsProton->SetP4(*lProton);
+	      hsKm->SetP4(*lKMinus);
+	      hsBeam->SetP4(*lPhoton);
+	      treepKm->Fill();
 
 	  }
 	  else if (pid==4) {
@@ -818,6 +909,13 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
 		  
 	      // Plot the phi for this pid
 	      h4_phi4->Fill(lPhi->M());
+		  h4_KK_pK4->Fill((*lProton + *lKMinus).M(), (*lKPlus + *lKMinus).M());
+	      
+	      //Fill HSParticles
+	      hsKp->SetP4(*lKPlus);
+	      hsKm->SetP4(*lKMinus);
+	      hsBeam->SetP4(*lPhoton);
+	      treeKpKm->Fill();	      
 		  
 	  }
 	  
@@ -850,6 +948,7 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
        *  End of user customized section ----------------------------
 	  */
       eventTot++;
+      fgID++;
       if(eventTot%1000 == 0) fprintf(stdout,"done %d\n",eventTot);
       if((nEvents>0)&&(eventTot >=nEvents)) break;		//break if nEvents done
     }
@@ -873,6 +972,27 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
 
   // ******** Do any final stuff here ***********************************
   //                                                                    *
+  
+  // write out the trees for sWeights
+  filepKpKm->cd();
+  treepKpKm->Write();
+  filepKpKm->Close();
+  delete filepKpKm;
+  
+  filepKp->cd();
+  treepKp->Write();
+  filepKp->Close();
+  delete filepKp;
+  
+  filepKm->cd();
+  treepKm->Write();
+  filepKm->Close();
+  delete filepKm;
+  
+  fileKpKm->cd();
+  treeKpKm->Write();
+  fileKpKm->Close();
+  delete fileKpKm;
   
 // Write out the plots
 TCanvas *c1=new TCanvas("c1","c1",800,600);
@@ -1118,10 +1238,30 @@ c1->SetGrid();
 c1->SaveAs("h4_MM_pKMinus_pPiMinus.gif");
 c1->Clear();      
 
+h4_KK_pK1->Draw("COLZ");
+c1->SetGrid();
+c1->SaveAs("h4_KK_pK1.gif");
+c1->Clear();     
+
+h4_KK_pK2->Draw("COLZ");
+c1->SetGrid();
+c1->SaveAs("h4_KK_pK2.gif");
+c1->Clear();  
+
+h4_KK_pK3->Draw("COLZ");
+c1->SetGrid();
+c1->SaveAs("h4_KK_pK3.gif");
+c1->Clear();
+
+h4_KK_pK4->Draw("COLZ");
+c1->SetGrid();
+c1->SaveAs("h4_KK_pK4.gif");
+c1->Clear();    
+
 h4_KK_pK->Draw("COLZ");
 c1->SetGrid();
 c1->SaveAs("h4_KK_pK.gif");
-c1->Clear();     
+c1->Clear();  
 
 h4_photonEnergy->Draw();
 c1->SaveAs("h4_photonEnergy.gif");
