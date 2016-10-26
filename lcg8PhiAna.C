@@ -59,6 +59,12 @@
  * - h1_multHist: Multiplicity
  * - h1 hists same as h0 above
  * - h1_zProton, h1_zKPlus: z position from event for proton and K+
+ * - h1_elossp: proton eloss
+ * - h1_elossp_mom: eloss vs mom for proton
+ * - h1_elosskp: K+ eloss
+ * - h1_elosskp_mom: eloss vs mom for K+
+ * - h1_elosskm: K- eloss
+ * - h1_elosskm_mom: eloss vs mom for K-
  * - h2_allPhotonTimeDiff - time difference between photon and proton (all photons)
  * - h2_bestPhotonTimeDiff - time difference between photon and proton (best photon)
  * 	 - proton beta taken from 4-vector with PDG mass assigned
@@ -177,6 +183,13 @@ class   TH2D *h1_betamomm;
 class   TH2D *h1_yxp;
 class   TH2D *h1_yxm;
 
+class   TH1F *h1_elossp;
+class   TH2F *h1_elossp_mom;
+class   TH1F *h1_elosskp;
+class   TH2F *h1_elosskp_mom;
+class   TH1F *h1_elosskm;
+class   TH2F *h1_elosskm_mom;
+
 class 	TH1D *h2_allPhotonTimeDiff;
 class 	TH1D *h2_bestPhotonTimeDiff;
 class 	TH1D *h2_photonEnergy;
@@ -226,13 +239,17 @@ TLorentzVector *lProtonDet;
 TLorentzVector *lKPlusDet;
 TLorentzVector *lKMinusDet;
 
+// eloss
+TLorentzVector *p_in;  //,*p_out;			// momenta before and after eloss correction
+TVector3	vert;			// the vertex
+
 // particles reconstructed from missing mass
 TLorentzVector *lProtonMM;
 TLorentzVector *lKPlusMM;
 TLorentzVector *lKMinusMM;
 TLorentzVector *lNoMM;
 
-// p K+ K- with appropriate Det/MM assigned for channel
+// p K+ K- with appropriate Det/MM assigned for topology
 TLorentzVector *lProton;
 TLorentzVector *lKPlus;
 TLorentzVector *lKMinus;
@@ -434,6 +451,27 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
   h1_yxm->GetXaxis()->SetTitle("x");
   h1_yxm->GetYaxis()->SetTitle("y");  
 
+  h1_elossp = new TH1F("h1_elossp","Proton energy loss in target and start counter",500,0,50); 
+  h1_elossp ->GetXaxis()->SetTitle("Energy loss (MeV)");
+  h1_elossp_mom = new TH2F("h1_elossp_mom","Proton energy loss in target and start counter",100,0,3,500,0,50);
+  h1_elossp_mom->GetXaxis()->SetTitle("Proton momentum (GeV)");
+  h1_elossp_mom->GetYaxis()->SetTitle("Energy loss (MeV)");
+  
+  h1_elosskp = new TH1F("h1_elosskp","K+ energy loss in target and start counter",500,0,50); 
+  h1_elosskp ->GetXaxis()->SetTitle("Energy loss (MeV)");
+  h1_elosskp_mom = new TH2F("h1_elosskp_mom","K+ energy loss in target and start counter",100,0,3,500,0,50);
+  h1_elosskp_mom->GetXaxis()->SetTitle("K+ momentum (GeV)");
+  h1_elosskp_mom->GetYaxis()->SetTitle("Energy loss (MeV)");
+  
+  h1_elosskm = new TH1F("h1_elosskm","K- energy loss in target and start counter",500,0,50); 
+  h1_elosskm ->GetXaxis()->SetTitle("Energy loss (MeV)");
+  h1_elosskm_mom = new TH2F("h1_elosskm_mom","K- energy loss in target and start counter",100,0,3,500,0,50);
+  h1_elosskm_mom->GetXaxis()->SetTitle("K- momentum (GeV)");
+  h1_elosskm_mom->GetYaxis()->SetTitle("Energy loss (MeV)");
+  
+  //initialise eloss targ_X, targ_y, targ_z, st_offset
+  //targ_X, targ_y, targ_z, st_offset
+  initELoss(0.0,0.0,-20.0,-24.06);
   
   h2_allPhotonTimeDiff = new TH1D("h2_allPhotonTimeDiff", "Proton - photon time diff - all photons", 1000, -50.0, 50.0);  
   h2_bestPhotonTimeDiff = new TH1D("h2_bestPhotonTimeDiff", "Proton - photon time diff - best photons", 1000, -50.0, 50.0);  		     
@@ -513,6 +551,9 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
   lProtonDet = new TLorentzVector(1.0,1.0,1.0,1.0);
   lKPlusDet = new TLorentzVector(1.0,1.0,1.0,1.0);
   lKMinusDet = new TLorentzVector(1.0,1.0,1.0,1.0);
+  
+  // eloss
+  p_in = new TLorentzVector(1.0,1.0,1.0,1.0);
 
   // p K+ K- with appropriate Det/MM assigned for channel
   lProton = new TLorentzVector(1.0,1.0,1.0,1.0);
@@ -692,34 +733,58 @@ void lcg8PhiAna(int nEvents, char *file, char *outFileName){   // main user func
       // Create 4-vectors for each of the detected particles
       // Since we've now ID'd these particles, give them an exact mass
       // We trust the momentum from the EVNT but we don't trust the mass
-      if (pid==1) {
-		  // p K+ K- detected
-		  lProtonDet->SetXYZM(EVNT[rowProton].Cx*EVNT[rowProton].Pmom,EVNT[rowProton].Cy*EVNT[rowProton].Pmom,EVNT[rowProton].Cz*EVNT[rowProton].Pmom,PROTON_MASS);
-		  lKPlusDet->SetXYZM(EVNT[rowKPlus].Cx*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cy*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cz*EVNT[rowKPlus].Pmom,KAON_CHARGED_MASS);
-		  lKMinusDet->SetXYZM(EVNT[rowKMinus].Cx*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cy*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cz*EVNT[rowKMinus].Pmom,KAON_CHARGED_MASS);
-	  }
-	  else if (pid==2) {
-		  // missing K-
-		  lProtonDet->SetXYZM(EVNT[rowProton].Cx*EVNT[rowProton].Pmom,EVNT[rowProton].Cy*EVNT[rowProton].Pmom,EVNT[rowProton].Cz*EVNT[rowProton].Pmom,PROTON_MASS);
-		  lKPlusDet->SetXYZM(EVNT[rowKPlus].Cx*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cy*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cz*EVNT[rowKPlus].Pmom,KAON_CHARGED_MASS);
-	  }
-	  else if (pid==3) {
-		  // missing K+
-		  lProtonDet->SetXYZM(EVNT[rowProton].Cx*EVNT[rowProton].Pmom,EVNT[rowProton].Cy*EVNT[rowProton].Pmom,EVNT[rowProton].Cz*EVNT[rowProton].Pmom,PROTON_MASS);
-		  lKMinusDet->SetXYZM(EVNT[rowKMinus].Cx*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cy*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cz*EVNT[rowKMinus].Pmom,KAON_CHARGED_MASS);
-	  }
-	  else if (pid==4) {
-		  // missing p
-		  lKPlusDet->SetXYZM(EVNT[rowKPlus].Cx*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cy*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cz*EVNT[rowKPlus].Pmom,KAON_CHARGED_MASS);
-		  lKMinusDet->SetXYZM(EVNT[rowKMinus].Cx*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cy*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cz*EVNT[rowKMinus].Pmom,KAON_CHARGED_MASS);
-	  }
 
+	  if (numProton != 0) {
+
+		  lProtonDet->SetXYZM(EVNT[rowProton].Cx*EVNT[rowProton].Pmom,EVNT[rowProton].Cy*EVNT[rowProton].Pmom,EVNT[rowProton].Cz*EVNT[rowProton].Pmom,PROTON_MASS);
+		  
+		  // apply eloss to proton
+		  // make 3vector for vertex
+		  vert.SetXYZ(EVNT[rowProton].X,EVNT[rowProton].Y,EVNT[rowProton].Z);
+		  // call eloss
+		  p_in=eLoss(lProtonDet,PROTON_MASS,vert,ELOSS_TARG_LH2,ELOSS_CELL_g8b);
+		  // histogram the eloss in MeV
+		  h1_elossp->Fill(1000.0*(p_in->P()-lProtonDet->P()));
+		  h1_elossp_mom->Fill(lProtonDet->P(),1000.0*(p_in->P()-lProtonDet->P()));
+		  //Reset 4-Vector to eloss values
+		  lProtonDet->SetXYZM(p_in->X(),p_in->Y(),p_in->Z(),p_in->M());
+		  
+	  }
+		  
 	  if (numKPlus != 0) {
+		  
+		  lKPlusDet->SetXYZM(EVNT[rowKPlus].Cx*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cy*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cz*EVNT[rowKPlus].Pmom,KAON_CHARGED_MASS);
+
+		  // apply eloss to K+
+		  // make 3vector for vertex
+		  vert.SetXYZ(EVNT[rowKPlus].X,EVNT[rowKPlus].Y,EVNT[rowKPlus].Z);
+		  // call eloss
+		  p_in=eLoss(lKPlusDet,KAON_CHARGED_MASS,vert,ELOSS_TARG_LH2,ELOSS_CELL_g8b);
+		  // histogram the eloss in MeV
+		  h1_elosskp->Fill(1000.0*(p_in->P()-lKPlusDet->P()));
+		  h1_elosskp_mom->Fill(lKPlusDet->P(),1000.0*(p_in->P()-lKPlusDet->P()));
+		  //Reset 4-Vector to eloss values
+		  lKPlusDet->SetXYZM(p_in->X(),p_in->Y(),p_in->Z(),p_in->M());
+		  
 		  // Maybe the K+ is actually a Pi+
 		  lPiPlus->SetXYZM(EVNT[rowKPlus].Cx*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cy*EVNT[rowKPlus].Pmom,EVNT[rowKPlus].Cz*EVNT[rowKPlus].Pmom,PI_CHARGED_MASS);  
 	  }
 	  
 	  if (numKMinus != 0) {
+		  
+		  lKMinusDet->SetXYZM(EVNT[rowKMinus].Cx*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cy*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cz*EVNT[rowKMinus].Pmom,KAON_CHARGED_MASS);
+		  
+		  // apply eloss to K+
+		  // make 3vector for vertex
+		  vert.SetXYZ(EVNT[rowKMinus].X,EVNT[rowKMinus].Y,EVNT[rowKMinus].Z);
+		  // call eloss
+		  p_in=eLoss(lKMinusDet,KAON_CHARGED_MASS,vert,ELOSS_TARG_LH2,ELOSS_CELL_g8b);
+		  // histogram the eloss in MeV
+		  h1_elosskm->Fill(1000.0*(p_in->P()-lKMinusDet->P()));
+		  h1_elosskm_mom->Fill(lKMinusDet->P(),1000.0*(p_in->P()-lKMinusDet->P()));
+		  //Reset 4-Vector to eloss values
+		  lKMinusDet->SetXYZM(p_in->X(),p_in->Y(),p_in->Z(),p_in->M());		  
+		  
 		  // Maybe the K- is actually a Pi-
 		  lPiMinus->SetXYZM(EVNT[rowKMinus].Cx*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cy*EVNT[rowKMinus].Pmom,EVNT[rowKMinus].Cz*EVNT[rowKMinus].Pmom,PI_CHARGED_MASS);  
 	  }
@@ -1113,6 +1178,33 @@ c1->Clear();
 
 h1_yxm->Draw();
 c1->SaveAs("h1_yxm.gif");
+c1->Clear();
+
+h1_elossp->Draw();
+c1->SaveAs("h1_elossp.gif");
+c1->Clear();
+
+gStyle->SetPalette(1);
+h1_elossp_mom->Draw("COLZ");
+c1->SaveAs("h1_elossp_mom.gif");
+c1->Clear();
+
+h1_elosskp->Draw();
+c1->SaveAs("h1_elosskp.gif");
+c1->Clear();
+
+gStyle->SetPalette(1);
+h1_elosskp_mom->Draw("COLZ");
+c1->SaveAs("h1_elosskp_mom.gif");
+c1->Clear();
+
+h1_elosskm->Draw();
+c1->SaveAs("h1_elosskm.gif");
+c1->Clear();
+
+gStyle->SetPalette(1);
+h1_elosskm_mom->Draw("COLZ");
+c1->SaveAs("h1_elosskm_mom.gif");
 c1->Clear();
 
 h2_allPhotonTimeDiff->Draw();
