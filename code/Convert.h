@@ -12,6 +12,7 @@
 #include <TChain.h>
 #include <TFile.h>
 #include <TSelector.h>
+#include <TLorentzRotation.h>
 #include "THSOutput.h"
 //#include "particleDEF.h"        //Particle Definitions
 
@@ -31,18 +32,29 @@ public :
    THSParticle     *Kp;
    THSParticle     *Km;
    THSParticle     *beam;
-   
-   
-   
+
    // Louise
+   bool 	courseCut=false;
    Double_t  eGamma;
    Double_t  MKpKm;
    Double_t  t;
    Double_t  MpKm;
+   Double_t  MissM2;
    Double_t  MissM;
-   Double_t  PhiPhi;
-   Double_t  CosThetaPhi;
-   
+   Double_t  phiPhiCm;
+   Double_t  phiProton;
+   Double_t  phiPhimPhiProton;
+   Double_t  cosThetaPhiCm;
+   Double_t  phiKpHel;
+   Double_t  cosThetaKpHel;
+   Double_t  phimPHIKpHel;
+   Double_t  phipPHIKpHel;
+   Double_t  PHI;
+   Double_t  phiKpGJ;
+   Double_t  cosThetaKpGJ;
+   Double_t  phimPHIKpGJ;
+   Double_t  phipPHIKpGJ;
+
    TLorentzVector *lTarget;
    TLorentzVector *MM;
    TLorentzVector *lPhi;
@@ -50,11 +62,15 @@ public :
    TLorentzVector *lProton;
    TLorentzVector *lKp;
    TLorentzVector *lKm;
-   
+
    TH1F *meanPolGPARA, *eventsPolGPARA;
-   TH1F *phiPhiPARA, *phiPhiPERP;
-   
-   
+   TH1F *phiPhiCmPARA, *phiPhiCmPERP, *cosThetaPhiCmPARA, *cosThetaPhiCmPERP; 
+   TH1F *phiKpHelPARA, *phiKpHelPERP, *cosThetaKpHelPARA, *cosThetaKpHelPERP;
+   TH1F *phiKpGJPARA, *phiKpGJPERP, *cosThetaKpGJPARA, *cosThetaKpGJPERP;
+   TH1F *massKpKm, *masspKm, *missMass2, *missMass;
+   TH2F *mass_pKm_KpKm;
+  
+
   //data members for new branches
   //you must define how they are processed for each event
   //e.g.   TLorentzVector  *fp1;
@@ -136,3 +152,4 @@ Bool_t Convert::Notify()
 }
 
 #endif // #ifdef Convert_cxx
+   
